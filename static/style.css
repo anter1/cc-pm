@@ -1,4 +1,44 @@
 * {
 	margin: 0;
 	padding: 0;
+	box-sizing: border-box;
+}
+
+#gamecontainer {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	width: 100%;
+}
+
+
+#board {
+	flex: 1 1 auto;
+	min-height: 200px;
+}
+
+.currentTileContainer {
+	flex: 0 0 200px;
+	align-items: flex-start;
+	justify-content: center;
+	display: flex;
+	padding: 10px 0 10px 0;
+}
+
+.leftTurn {
+	flex: 0 0 60px;
+	width: 60px;
+	height: 60px;	
+}
+
+.rightTurn {
+	flex: 0 0 60px;	
+	width: 60px;
+	height: 60px;	
+}
+
+.currentTile {
+	flex: 0 0 180px;
+	height:180px;
+	width:180px;
 }
