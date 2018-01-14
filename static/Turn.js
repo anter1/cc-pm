@@ -7,7 +7,7 @@ System.register([], function (exports_1, context_1) {
         execute: function () {
             TurnResult = class TurnResult {
                 static notPlacedResult() {
-                    return { tilePlaced: false, y: 0, x: 0, rot: 0 };
+                    return { tilePlaced: false, y: -1, x: -1, rot: 0, tileSpec: null };
                 }
             };
             exports_1("TurnResult", TurnResult);

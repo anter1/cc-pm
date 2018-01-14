@@ -16,8 +16,33 @@ System.register([], function (exports_1, context_1) {
             rot += 4;
         }
         let totalEdges = numEdgesForFeature(feature);
-        return edge + totalEdges / 4 * rot;
+        return (edge + totalEdges / 4 * rot) % totalEdges;
     }
+    function* allEdgeFeatures() {
+        yield EdgeFeature.Road;
+        yield EdgeFeature.City;
+        yield EdgeFeature.Farm;
+    }
+    function* allEdgesAndFeature() {
+        for (let feature of allEdgeFeatures()) {
+            let totalEdges = numEdgesForFeature(feature);
+            for (let edge = 0; edge < totalEdges; ++edge) {
+                yield [feature, edge];
+            }
+        }
+    }
+    exports_1("allEdgesAndFeature", allEdgesAndFeature);
+    function oppositeEdge(feature, edge) {
+        let totalEdges = numEdgesForFeature(feature);
+        if (totalEdges == 4) {
+            return oppositeEdges4[edge];
+        }
+        else if (totalEdges == 8) {
+            return oppositeEdges8[edge];
+        }
+        throw Error("Unsupported number of edges = " + totalEdges);
+    }
+    exports_1("oppositeEdge", oppositeEdge);
     var EdgeFeature, TileFeature, oppositeEdges4, oppositeEdges8, EdgeSpec, CitySpec, RoadSpec, FarmSpec, TileSpec;
     return {
         setters: [],
@@ -55,26 +80,10 @@ System.register([], function (exports_1, context_1) {
                     this.feature = feature;
                     this.edges = [];
                 }
-                totalEdges() {
-                    return numEdgesForFeature(this.feature);
-                }
                 *getEdges(rot) {
-                    while (rot < 0) {
-                        rot += 4;
-                    }
-                    let numEdges = this.totalEdges();
                     for (let edge of this.edges) {
-                        yield (edge + rot * numEdges / 2) % numEdges;
+                        yield rotateEdge(this.feature, edge, rot);
                     }
-                }
-                oppositeEdge(edge) {
-                    if (this.totalEdges() == 4) {
-                        return oppositeEdges4[edge];
-                    }
-                    else if (this.totalEdges() == 8) {
-                        return oppositeEdges8[edge];
-                    }
-                    throw Error("Unsupported number of edges = " + this.totalEdges());
                 }
             };
             exports_1("EdgeSpec", EdgeSpec);
@@ -208,13 +217,6 @@ System.register([], function (exports_1, context_1) {
                             return this.farmForEdge;
                     }
                     throw "Unknown feature + " + feature;
-                }
-                *edgeSpecsForFeature(feature) {
-                    for (let edgeSpec of this.allEdgeSpecs.values()) {
-                        if (edgeSpec.feature === feature) {
-                            yield edgeSpec;
-                        }
-                    }
                 }
                 imgUrl() {
                     return "static/img/tiles/" + this.imgId + ".png";

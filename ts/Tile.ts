@@ -45,7 +45,33 @@ function rotateEdge(feature:EdgeFeature, edge:number, rot:number) {
   }
   
   let totalEdges = numEdgesForFeature(feature);
-  return edge + totalEdges / 4 * rot; 
+  return (edge + totalEdges / 4 * rot) % totalEdges; 
+}
+
+function *allEdgeFeatures(): IterableIterator<EdgeFeature> {
+  yield EdgeFeature.Road;
+  yield EdgeFeature.City;
+  yield EdgeFeature.Farm;
+}
+
+export function *allEdgesAndFeature(): IterableIterator<[EdgeFeature,number]> {
+  for (let feature of allEdgeFeatures()) {
+    let totalEdges = numEdgesForFeature(feature);
+    for (let edge = 0; edge < totalEdges; ++edge) {
+      yield [feature, edge];
+    }
+  }
+}
+
+export function oppositeEdge(feature:EdgeFeature, edge:number):[number, number, number] {
+  let totalEdges = numEdgesForFeature(feature);
+  if (totalEdges == 4) {
+    return oppositeEdges4[edge] as [number, number, number];
+  } else if (totalEdges == 8) {
+    return oppositeEdges8[edge] as [number, number, number];
+  }
+  
+  throw Error("Unsupported number of edges = " + totalEdges);
 }
 
 export abstract class EdgeSpec {
@@ -55,28 +81,11 @@ export abstract class EdgeSpec {
   }
   
   abstract validate(): void;
-  totalEdges(): number {
-    return numEdgesForFeature(this.feature);
-  }
   
   *getEdges(rot:number): IterableIterator<number> {
-    while (rot<0) {
-      rot += 4;
-    }
-    let numEdges = this.totalEdges();
     for (let edge of this.edges) {
-      yield (edge + rot * numEdges / 2) % numEdges;
+      yield rotateEdge(this.feature, edge, rot);
     }
-  }
-  
-  oppositeEdge(edge:number):[number, number, number] {
-    if (this.totalEdges() == 4) {
-      return oppositeEdges4[edge] as [number, number, number];
-    } else if (this.totalEdges() == 8) {
-      return oppositeEdges8[edge] as [number, number, number];
-    }
-    
-    throw Error("Unsupported number of edges = " + this.totalEdges());
   }
   
   feature: EdgeFeature;
@@ -216,14 +225,14 @@ export class TileSpec
     }
   }
   
-  edgeSpecForEdge(feature:EdgeFeature, edge:number, rot:number) {
+  edgeSpecForEdge(feature:EdgeFeature, edge:number, rot:number): EdgeSpec {
     let unRotatedEdge = rotateEdge(feature, edge, -rot);
     let edgeSpecs = this.edgeSpecsForEdge(feature);
     
     return edgeSpecs[unRotatedEdge];
   }
   
-  edgeSpecsForEdge(feature:EdgeFeature): Array<EdgeSpec|null> {
+  private edgeSpecsForEdge(feature:EdgeFeature): Array<EdgeSpec|null> {
     switch(feature) {
       case EdgeFeature.City:
         return this.cityForEdge;
@@ -233,14 +242,6 @@ export class TileSpec
         return this.farmForEdge;
     }
     throw "Unknown feature + " + feature;
-  }
-  
-  *edgeSpecsForFeature(feature:EdgeFeature): IterableIterator<EdgeSpec> {
-    for (let edgeSpec of this.allEdgeSpecs.values()) {
-      if (edgeSpec.feature === feature) {
-        yield edgeSpec;
-      }
-    }
   }
   
   imgUrl(): string {

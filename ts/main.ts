@@ -2,6 +2,7 @@ import {TileSpec,TileFeature} from "./Tile";
 import {RealTile, Board, BoardRenderer} from "./Board";
 import {Game} from "./Game"
 import {CurrentTileRenderer} from "./CurrentTile";
+import {Menu} from "./Menu"
 
 function addErrorHandler() {
   window.onerror = function(msg:string, filename:string, line: number, column: number, error:Error) {
@@ -61,7 +62,8 @@ function main() {
     2, // numPlayers
     0, // localPlayerPosition
     board => new BoardRenderer(board, document.getElementById('board')),
-      new CurrentTileRenderer(document.getElementById('player1Container')));
+    new CurrentTileRenderer(document.getElementById('player1Container')),
+    new Menu(document.getElementById('menu')));
   
   game.start();
 }

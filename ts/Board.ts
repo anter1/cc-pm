@@ -1,4 +1,4 @@
-import {TileSpec} from "./Tile"
+import {TileSpec, allEdgesAndFeature, oppositeEdge} from "./Tile"
 
 export enum TileType {
   Empty,
@@ -42,10 +42,116 @@ export class Board {
     this.tempTileY = -1;
     this.tempTileX = -1;
     this.tempTile = null;
-    this.tempTileValid = null;
+    this.tempTileValid = false;
   }
   
-  tryPlaceTemporaryTile(y: number, x: number, tileSpec: TileSpec, rot:number): boolean {
+  placeTile(y: number, x: number, tileSpec: TileSpec, rot: number): boolean {
+    let result = this.placeTileInternal(y,x,tileSpec,rot);
+    
+    if (result) {
+      this.ensureBorder();
+    }
+    
+    this.onDirty();
+    return result;
+  }
+  
+  ensureBorder() {
+    let okTop = true;
+    let okBottom = true;
+    for (let i = 0; i < this.width; ++i) {
+      if (this.tiles[0][i].tileType() !== TileType.Empty) {
+        okTop = false;
+      }
+      if (this.tiles[this.height - 1][i].tileType() !== TileType.Empty) {
+        okBottom = false;
+      }
+    }
+    
+    if (!okTop) {
+      let newRow = Array<Tile>();
+      for (let i = 0; i  < this.width; ++i) {
+        newRow.push(new EmptyTile());
+      }
+      this.tiles.splice(0, 0, newRow);
+      ++this.height;
+    }
+  
+    if (!okBottom) {
+      let newRow = Array<Tile>();
+      for (let i = 0; i  < this.width; ++i) {
+        newRow.push(new EmptyTile());
+      }
+      this.tiles.splice(this.height, 0, newRow);
+      ++this.height;
+    }
+    
+    let okLeft = true;
+    let okRight = true;
+    for (let i = 0; i < this.height; ++i) {
+      if (this.tiles[i][0].tileType() !== TileType.Empty) {
+        okLeft = false;
+      }
+      if (this.tiles[i][this.width - 1].tileType() !== TileType.Empty) {
+        okRight = false;
+      }
+    }
+    
+    if (!okLeft) {
+      for (let i = 0; i < this.height; ++i) {
+        this.tiles[i].splice(0, 0, new EmptyTile());
+      }
+      ++this.width;
+    }
+    
+    if (!okRight) {
+      for (let i = 0; i < this.height; ++i) {
+        this.tiles[i].splice(this.width, 0, new EmptyTile());
+      }
+      ++this.width;
+    }
+  }
+  
+  placeTileInternal(y: number, x: number, tileSpec: TileSpec, rot: number): boolean {
+    if (this.tempTile) {
+      this.tryPlaceTemporaryTile(this.tempTileY, this.tempTileX, null, 0);
+    }
+    
+    if (y<0 || x<0 || x>=this.width || y>=this.height) {
+      return false;
+    }
+    
+    if (this.tiles[y][x].tileType() !== TileType.Empty) {
+      return false;
+    }
+    
+    this.tiles[y][x] = new RealTile(tileSpec, rot);
+    if (!this.isTileValid(y,x)) {
+      this.tiles[y][x] = new EmptyTile();
+      return false;
+    }
+    
+    return true;
+  }
+  
+  clearTemporaryTile() {
+    if (this.tempTile) {
+      this.tiles[this.tempTileY][this.tempTileX] = new EmptyTile();
+    }
+    
+    this.tempTileY = -1;
+    this.tempTileX = -1;
+    this.tempTile = null;
+    this.tempTileValid = false;
+  }
+  
+  tryPlaceTemporaryTile(y: number, x: number, tileSpec: TileSpec|null, rot:number): boolean {
+    if (!tileSpec) {
+      this.clearTemporaryTile();
+      this.onDirty();
+      return true;
+    }
+    
     if (y<0 || x<0 || x>=this.width || y>=this.height) {
       return false;
     }
@@ -54,50 +160,43 @@ export class Board {
       return false;
     }
     
-    if (this.tempTile) {
-      this.tiles[this.tempTileY][this.tempTileX] = new EmptyTile();
-    }
+    this.clearTemporaryTile();
     
     this.tempTileY = y;
     this.tempTileX = x;
     this.tiles[y][x] = this.tempTile = new RealTile(tileSpec, rot);
-    this.tempTileValid = this.isTempTileValid();
+    this.tempTileValid = this.isTileValid(this.tempTileY, this.tempTileX);
     
     this.onDirty();
-    
     return true;
-  }
-  
-  updateTemporaryRot(rot: number): boolean {
-    if (!this.tempTile) {
-      return false;
-    }
-    
-    return this.tryPlaceTemporaryTile(this.tempTileY, this.tempTileX, this.tempTile.tileSpec, rot);
   }
   
   isTemporary(y:number, x:number) {
     return y==this.tempTileY && x==this.tempTileX;
   }
   
-  isTempTileValid(): boolean {
-    let tile = this.tempTile;
+  isTileValid(y: number, x: number): boolean {
+    let someTile = this.tiles[y][x];
+    if (!someTile || someTile.tileType() !== TileType.Real) {
+      return false;
+    }
+    
+    let tile = someTile as RealTile;
     
     let foundNeighbor = false;
-    for (let edgeSpec of tile.tileSpec.allEdgeSpecs.values()) {
-      for (let tileEdge of edgeSpec.getEdges(tile.rot)) {
-        let [dy,dx,nedge] = edgeSpec.oppositeEdge(tileEdge);
-        let ny = this.tempTileY + dy;
-        let nx = this.tempTileX + dx;
-        if (ny>=0&&nx>=0&&ny<this.height&&nx<this.width) {
-          let nTile = this.tiles[ny][nx];
-          if (nTile.tileType() == TileType.Real) {
-            foundNeighbor = true;
-            let nTileReal = nTile as RealTile;
-            let nFeature = nTileReal.tileSpec.edgeSpecForEdge(edgeSpec.feature, nedge, nTileReal.rot);
-            if (!nFeature) {
-              return false;
-            }
+    for (let [feature, edge] of allEdgesAndFeature()) {
+      let edgeSpec = tile.tileSpec.edgeSpecForEdge(feature, edge, tile.rot);
+      let [dy,dx,nedge] = oppositeEdge(feature, edge);
+      let ny = y + dy;
+      let nx = x + dx;
+      if (ny>=0&&nx>=0&&ny<this.height&&nx<this.width) {
+        let nTile = this.tiles[ny][nx];
+        if (nTile.tileType() == TileType.Real) {
+          foundNeighbor = true;
+          let nTileReal = nTile as RealTile;
+          let nFeature = nTileReal.tileSpec.edgeSpecForEdge(feature, nedge, nTileReal.rot);
+          if (edgeSpec && !nFeature || !edgeSpec && nFeature) {
+            return false;
           }
         }
       }
@@ -112,7 +211,7 @@ export class Board {
   
   tempTileY: number;
   tempTileX: number;
-  tempTile: RealTile;
+  tempTile: RealTile|null;
   tempTileValid: boolean;
   
   onDirty: ()=>void;
@@ -258,9 +357,9 @@ export class BoardRenderer {
           tempTileOverlay.style.left = x * itemSize + offsetX + "px";
           tempTileOverlay.style.top = y * itemSize + offsetY + "px";
           if (this.board.tempTileValid) {
-            tempTileOverlay.style.border = "10px solid blue";
+            tempTileOverlay.style.border = "5px solid blue";
           } else {
-            tempTileOverlay.style.border = "10px solid red";
+            tempTileOverlay.style.border = "5px solid red";
           }
         }
         
@@ -295,8 +394,6 @@ export class BoardRenderer {
     }
     
     this.tempTileOverlay = this.container.ownerDocument.createElement("div");
-    this.tempTileOverlay.style.backgroundColor = "#A0A000";
-    this.tempTileOverlay.style.opacity = "0.5";
     this.tempTileOverlay.style.position = "absolute";
     this.tempTileOverlay.style.zIndex = "1";
     

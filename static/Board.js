@@ -1,4 +1,4 @@
-System.register([], function (exports_1, context_1) {
+System.register(["./Tile"], function (exports_1, context_1) {
     "use strict";
     var __moduleName = context_1 && context_1.id;
     function createTileRenderer(tile) {
@@ -10,9 +10,13 @@ System.register([], function (exports_1, context_1) {
         }
         throw new Error("Unsupported tileType: " + tile.tileType);
     }
-    var TileType, EmptyTile, RealTile, Board, TileRenderer, EmptyTileRenderer, RealTileRenderer, BoardRenderer;
+    var Tile_1, TileType, EmptyTile, RealTile, Board, TileRenderer, EmptyTileRenderer, RealTileRenderer, BoardRenderer;
     return {
-        setters: [],
+        setters: [
+            function (Tile_1_1) {
+                Tile_1 = Tile_1_1;
+            }
+        ],
         execute: function () {
             (function (TileType) {
                 TileType[TileType["Empty"] = 0] = "Empty";
@@ -47,51 +51,135 @@ System.register([], function (exports_1, context_1) {
                     this.tempTileY = -1;
                     this.tempTileX = -1;
                     this.tempTile = null;
-                    this.tempTileValid = null;
+                    this.tempTileValid = false;
+                }
+                placeTile(y, x, tileSpec, rot) {
+                    let result = this.placeTileInternal(y, x, tileSpec, rot);
+                    if (result) {
+                        this.ensureBorder();
+                    }
+                    this.onDirty();
+                    return result;
+                }
+                ensureBorder() {
+                    let okTop = true;
+                    let okBottom = true;
+                    for (let i = 0; i < this.width; ++i) {
+                        if (this.tiles[0][i].tileType() !== TileType.Empty) {
+                            okTop = false;
+                        }
+                        if (this.tiles[this.height - 1][i].tileType() !== TileType.Empty) {
+                            okBottom = false;
+                        }
+                    }
+                    if (!okTop) {
+                        let newRow = Array();
+                        for (let i = 0; i < this.width; ++i) {
+                            newRow.push(new EmptyTile());
+                        }
+                        this.tiles.splice(0, 0, newRow);
+                        ++this.height;
+                    }
+                    if (!okBottom) {
+                        let newRow = Array();
+                        for (let i = 0; i < this.width; ++i) {
+                            newRow.push(new EmptyTile());
+                        }
+                        this.tiles.splice(this.height, 0, newRow);
+                        ++this.height;
+                    }
+                    let okLeft = true;
+                    let okRight = true;
+                    for (let i = 0; i < this.height; ++i) {
+                        if (this.tiles[i][0].tileType() !== TileType.Empty) {
+                            okLeft = false;
+                        }
+                        if (this.tiles[i][this.width - 1].tileType() !== TileType.Empty) {
+                            okRight = false;
+                        }
+                    }
+                    if (!okLeft) {
+                        for (let i = 0; i < this.height; ++i) {
+                            this.tiles[i].splice(0, 0, new EmptyTile());
+                        }
+                        ++this.width;
+                    }
+                    if (!okRight) {
+                        for (let i = 0; i < this.height; ++i) {
+                            this.tiles[i].splice(this.width, 0, new EmptyTile());
+                        }
+                        ++this.width;
+                    }
+                }
+                placeTileInternal(y, x, tileSpec, rot) {
+                    if (this.tempTile) {
+                        this.tryPlaceTemporaryTile(this.tempTileY, this.tempTileX, null, 0);
+                    }
+                    if (y < 0 || x < 0 || x >= this.width || y >= this.height) {
+                        return false;
+                    }
+                    if (this.tiles[y][x].tileType() !== TileType.Empty) {
+                        return false;
+                    }
+                    this.tiles[y][x] = new RealTile(tileSpec, rot);
+                    if (!this.isTileValid(y, x)) {
+                        this.tiles[y][x] = new EmptyTile();
+                        return false;
+                    }
+                    return true;
+                }
+                clearTemporaryTile() {
+                    if (this.tempTile) {
+                        this.tiles[this.tempTileY][this.tempTileX] = new EmptyTile();
+                    }
+                    this.tempTileY = -1;
+                    this.tempTileX = -1;
+                    this.tempTile = null;
+                    this.tempTileValid = false;
                 }
                 tryPlaceTemporaryTile(y, x, tileSpec, rot) {
+                    if (!tileSpec) {
+                        this.clearTemporaryTile();
+                        this.onDirty();
+                        return true;
+                    }
                     if (y < 0 || x < 0 || x >= this.width || y >= this.height) {
                         return false;
                     }
                     if (this.tiles[y][x].tileType() !== TileType.Empty && !(this.tempTile && this.tempTileY === y && this.tempTileX === x)) {
                         return false;
                     }
-                    if (this.tempTile) {
-                        this.tiles[this.tempTileY][this.tempTileX] = new EmptyTile();
-                    }
+                    this.clearTemporaryTile();
                     this.tempTileY = y;
                     this.tempTileX = x;
                     this.tiles[y][x] = this.tempTile = new RealTile(tileSpec, rot);
-                    this.tempTileValid = this.isTempTileValid();
+                    this.tempTileValid = this.isTileValid(this.tempTileY, this.tempTileX);
                     this.onDirty();
                     return true;
-                }
-                updateTemporaryRot(rot) {
-                    if (!this.tempTile) {
-                        return false;
-                    }
-                    return this.tryPlaceTemporaryTile(this.tempTileY, this.tempTileX, this.tempTile.tileSpec, rot);
                 }
                 isTemporary(y, x) {
                     return y == this.tempTileY && x == this.tempTileX;
                 }
-                isTempTileValid() {
-                    let tile = this.tempTile;
+                isTileValid(y, x) {
+                    let someTile = this.tiles[y][x];
+                    if (!someTile || someTile.tileType() !== TileType.Real) {
+                        return false;
+                    }
+                    let tile = someTile;
                     let foundNeighbor = false;
-                    for (let edgeSpec of tile.tileSpec.allEdgeSpecs.values()) {
-                        for (let tileEdge of edgeSpec.getEdges(tile.rot)) {
-                            let [dy, dx, nedge] = edgeSpec.oppositeEdge(tileEdge);
-                            let ny = this.tempTileY + dy;
-                            let nx = this.tempTileX + dx;
-                            if (ny >= 0 && nx >= 0 && ny < this.height && nx < this.width) {
-                                let nTile = this.tiles[ny][nx];
-                                if (nTile.tileType() == TileType.Real) {
-                                    foundNeighbor = true;
-                                    let nTileReal = nTile;
-                                    let nFeature = nTileReal.tileSpec.edgeSpecForEdge(edgeSpec.feature, nedge, nTileReal.rot);
-                                    if (!nFeature) {
-                                        return false;
-                                    }
+                    for (let [feature, edge] of Tile_1.allEdgesAndFeature()) {
+                        let edgeSpec = tile.tileSpec.edgeSpecForEdge(feature, edge, tile.rot);
+                        let [dy, dx, nedge] = Tile_1.oppositeEdge(feature, edge);
+                        let ny = y + dy;
+                        let nx = x + dx;
+                        if (ny >= 0 && nx >= 0 && ny < this.height && nx < this.width) {
+                            let nTile = this.tiles[ny][nx];
+                            if (nTile.tileType() == TileType.Real) {
+                                foundNeighbor = true;
+                                let nTileReal = nTile;
+                                let nFeature = nTileReal.tileSpec.edgeSpecForEdge(feature, nedge, nTileReal.rot);
+                                if (edgeSpec && !nFeature || !edgeSpec && nFeature) {
+                                    return false;
                                 }
                             }
                         }
@@ -200,10 +288,10 @@ System.register([], function (exports_1, context_1) {
                                 tempTileOverlay.style.left = x * itemSize + offsetX + "px";
                                 tempTileOverlay.style.top = y * itemSize + offsetY + "px";
                                 if (this.board.tempTileValid) {
-                                    tempTileOverlay.style.border = "10px solid blue";
+                                    tempTileOverlay.style.border = "5px solid blue";
                                 }
                                 else {
-                                    tempTileOverlay.style.border = "10px solid red";
+                                    tempTileOverlay.style.border = "5px solid red";
                                 }
                             }
                             this.container.appendChild(tileElement);
@@ -231,8 +319,6 @@ System.register([], function (exports_1, context_1) {
                         return this.tempTileOverlay;
                     }
                     this.tempTileOverlay = this.container.ownerDocument.createElement("div");
-                    this.tempTileOverlay.style.backgroundColor = "#A0A000";
-                    this.tempTileOverlay.style.opacity = "0.5";
                     this.tempTileOverlay.style.position = "absolute";
                     this.tempTileOverlay.style.zIndex = "1";
                     this.container.appendChild(this.tempTileOverlay);

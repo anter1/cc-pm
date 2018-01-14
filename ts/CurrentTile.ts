@@ -46,13 +46,8 @@ export class CurrentTileRenderer {
     }
   }
   
-  setTileSpec(tileSpec: TileSpec): void {
+  setTileSpec(tileSpec: TileSpec|null, rot:number): void {
     this.tileSpec = tileSpec;
-    this.rot = 0;
-    this.render();
-  }
-  
-  setRot(rot: number) {
     this.rot = rot;
     this.render();
   }
@@ -62,7 +57,7 @@ export class CurrentTileRenderer {
   rightRotateElement: HTMLElement;
   currentTileImgElement: HTMLImageElement;
   
-  tileSpec: TileSpec;
+  tileSpec: TileSpec|null;
   rot: number;
   
   onLeftRotateClick: ()=>void;

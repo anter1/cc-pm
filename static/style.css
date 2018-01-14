@@ -4,13 +4,38 @@
 	box-sizing: border-box;
 }
 
-#gamecontainer {
+#gameContainer {
 	display: flex;
-	flex-direction: column;
+	flex-direction: row;
 	height: 100%;
 	width: 100%;
 }
 
+#playingArea {
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	width: 100%;
+	position: relative;
+}
+
+#menu {
+	flex: 0 0 300px;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+}
+
+#endTurn {
+	flex: 0 0 50px;
+	padding: 5px;
+	display: flex;
+}
+
+#endTurnButton {
+	flex: 1;
+}
 
 #board {
 	flex: 1 1 auto;

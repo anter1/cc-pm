@@ -41,12 +41,8 @@ System.register([], function (exports_1, context_1) {
                         this.currentTileImgElement.style.display = "block";
                     }
                 }
-                setTileSpec(tileSpec) {
+                setTileSpec(tileSpec, rot) {
                     this.tileSpec = tileSpec;
-                    this.rot = 0;
-                    this.render();
-                }
-                setRot(rot) {
                     this.rot = rot;
                     this.render();
                 }

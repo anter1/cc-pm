@@ -1,4 +1,4 @@
-System.register(["./Tile", "./Board", "./Game", "./CurrentTile"], function (exports_1, context_1) {
+System.register(["./Tile", "./Board", "./Game", "./CurrentTile", "./Menu"], function (exports_1, context_1) {
     "use strict";
     var __moduleName = context_1 && context_1.id;
     function addErrorHandler() {
@@ -49,10 +49,10 @@ System.register(["./Tile", "./Board", "./Game", "./CurrentTile"], function (expo
         let game = new Game_1.Game(deck, 2, // numPlayers
         0, // localPlayerPosition
             // localPlayerPosition
-            board => new Board_1.BoardRenderer(board, document.getElementById('board')), new CurrentTile_1.CurrentTileRenderer(document.getElementById('player1Container')));
+            board => new Board_1.BoardRenderer(board, document.getElementById('board')), new CurrentTile_1.CurrentTileRenderer(document.getElementById('player1Container')), new Menu_1.Menu(document.getElementById('menu')));
         game.start();
     }
-    var Tile_1, Board_1, Game_1, CurrentTile_1;
+    var Tile_1, Board_1, Game_1, CurrentTile_1, Menu_1;
     return {
         setters: [
             function (Tile_1_1) {
@@ -66,6 +66,9 @@ System.register(["./Tile", "./Board", "./Game", "./CurrentTile"], function (expo
             },
             function (CurrentTile_1_1) {
                 CurrentTile_1 = CurrentTile_1_1;
+            },
+            function (Menu_1_1) {
+                Menu_1 = Menu_1_1;
             }
         ],
         execute: function () {
